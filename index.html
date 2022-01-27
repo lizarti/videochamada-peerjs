@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Videochamada</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-screen">
+  <div id="app" class="h-full flex justify-center items-center bg-white">
+    <div class="flex flex-col">
+      <div class="p-6 mb-10 font-semibold text-3xl text-center" v-if="id">
+        MEU ID: {{ id }}
+      </div>
+      <div class="container grid gap-4 grid-cols-1 md:grid-cols-2">
+        <div class="p-4 shadow rounded">
+          <video :src-object.prop.camel="myVideoStream" autoplay width="720"></video>
+        </div>
+        <div class="p-4 shadow rounded">
+          <video :src-object.prop.camel="otherVideoStream" autoplay width="720"></video>
+        </div>
+      </div>
+      <hr class="border-t border-gray-200 mt-8" />
+      <div class="flex items-center p-6 space-x-6 bg-white rounded mt-8">
+        <div class="flex bg-gray-100 p-4 space-x-4 rounded w-full">
+          <input class="bg-gray-100 outline-none w-full" type="text" placeholder="Ou digite um código de sala" v-model="otherId"/>
+        </div>
+        <button class="py-4 px-8 bg-red-500 hover:bg-red-400 text-white font-semibold transition-all duration-150 rounded" @click="start()">Entrar</button>
+      </div>
+    </div>
+  </div>
+</body>
+<script src="https://unpkg.com/vue@next"></script>
+<script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+<script>
+const getUserMediaConstraints = {
+  video: { 
+    width: { 
+      min: 1280
+    }, 
+    height: { min:
+      720
+    }
+  }
+}
+
+const MESSAGE_TYPE = {
+  CONNECT: 'CONNECT'
+}
+
+function createRoomID() {
+  const uuid = crypto.randomUUID()
+  return uuid
+}
+
+const App = {
+  data() {
+    return {
+      id: '',
+      otherId: '',
+      ws: null,
+      myVideoStream: null,
+      otherVideoStream: null,
+      peer: null,
+      call: null
+    }
+  },
+  methods: {
+    async connectToPeerServer () {
+      this.peer = new Peer(null, {
+        debug: 2
+      })
+      this.peer.on('open', id => {
+        this.id = id
+      })
+      this.peer.on('call', call => {
+        this.call = call
+        this.setMyVideoStream()
+        setTimeout(() => {
+          this.call.answer(this.myVideoStream)
+        }, 100)
+        this.call.on('stream', remoteStream => {
+          console.log('on remote stream recebendo')
+          this.setOtherStream(remoteStream)
+        })
+      })
+    },
+    async setMyVideoStream () {
+      const stream = await navigator.mediaDevices.getUserMedia(getUserMediaConstraints)
+      this.myVideoStream = stream
+    },
+    async setOtherStream (stream) {
+      this.otherVideoStream = stream
+    },
+    async start () {
+      if (!this.otherId) {
+        return
+      }
+      await this.setMyVideoStream()
+      this.createCall()
+    },
+    createCall () {
+      const call = this.peer.call(this.otherId, this.myVideoStream)
+      this.call = call
+      console.log(this.peer)
+      this.call.on('stream', remoteStream => {
+        console.log('on remote stream chamando')
+        this.setOtherStream(remoteStream)
+      })
+      this.call.on('error', console.error)
+    }
+  },
+  created () {
+    this.connectToPeerServer()
+  }
+}
+Vue.createApp(App).mount('#app')
+</script>
+</html>
