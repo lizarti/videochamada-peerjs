@@ -45,21 +45,11 @@ const getUserMediaConstraints = {
   }
 }
 
-const MESSAGE_TYPE = {
-  CONNECT: 'CONNECT'
-}
-
-function createRoomID() {
-  const uuid = crypto.randomUUID()
-  return uuid
-}
-
 const App = {
   data() {
     return {
       id: '',
       otherId: '',
-      ws: null,
       myVideoStream: null,
       otherVideoStream: null,
       peer: null,
@@ -81,7 +71,6 @@ const App = {
           this.call.answer(this.myVideoStream)
         }, 100)
         this.call.on('stream', remoteStream => {
-          console.log('on remote stream recebendo')
           this.setOtherStream(remoteStream)
         })
       })
@@ -103,9 +92,7 @@ const App = {
     createCall () {
       const call = this.peer.call(this.otherId, this.myVideoStream)
       this.call = call
-      console.log(this.peer)
       this.call.on('stream', remoteStream => {
-        console.log('on remote stream chamando')
         this.setOtherStream(remoteStream)
       })
       this.call.on('error', console.error)
